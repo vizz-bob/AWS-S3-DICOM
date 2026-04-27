@@ -1,0 +1,81 @@
+name: Sync to AWS S3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/file_manifest.csv'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run only (no upload)'
+        type: boolean
+        default: true
+      source_path:
+        description: 'Local source path (absolute, on runner)'
+        type: string
+        default: '/data/OCP_images'
+
+jobs:
+  sync-manifest:
+    name: Sync Manifest & Metadata to S3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload file manifest to S3
+        run: |
+          aws s3 cp data/file_manifest.csv \
+            s3://tp53-dicom-migration-2026/metadata/file_manifest.csv \
+            --sse AES256
+
+      - name: Verify manifest upload
+        run: |
+          aws s3 ls s3://tp53-dicom-migration-2026/metadata/file_manifest.csv
+
+  upload-images:
+    name: Upload Images to S3 (Manual Trigger)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install boto3 tqdm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Run upload script
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          SOURCE_PATH: ${{ inputs.source_path }}
+        run: |
+          python scripts/upload_to_s3.py \
+            --bucket tp53-dicom-migration-2026 \
+            --prefix ocp-images/ \
+            --source "$SOURCE_PATH" \
+            $( [ "$DRY_RUN" = "true" ] && echo "--dry-run" )
+
+      - name: Generate upload summary
+        run: |
+          aws s3 ls s3://tp53-dicom-migration-2026/ocp-images/ \
+            --recursive --summarize | tail -3

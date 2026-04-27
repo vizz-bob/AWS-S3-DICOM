@@ -1,0 +1,65 @@
+name: Upload to Postdicom
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Upload source'
+        type: choice
+        options:
+          - s3
+          - local_runner
+        default: s3
+      batch_size:
+        description: 'Files per batch (1-50)'
+        type: number
+        default: 20
+
+jobs:
+  postdicom-upload:
+    name: Bulk Upload to Postdicom PACS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install boto3 requests tqdm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Download from S3 for upload
+        if: inputs.source == 's3'
+        run: |
+          mkdir -p /tmp/upload_batch
+          aws s3 sync \
+            s3://tp53-dicom-migration-2026/ocp-images/ \
+            /tmp/upload_batch/ \
+            --no-progress
+
+      - name: Upload to Postdicom
+        env:
+          POSTDICOM_API_KEY: ${{ secrets.POSTDICOM_API_KEY }}
+          POSTDICOM_WORKSPACE_ID: ${{ secrets.POSTDICOM_WORKSPACE_ID }}
+        run: |
+          python scripts/postdicom_upload.py \
+            --input-dir /tmp/upload_batch \
+            --batch-size ${{ inputs.batch_size }} \
+            --report postdicom_upload_report.txt
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: postdicom-upload-report-${{ github.run_number }}
+          path: postdicom_upload_report.txt
+          retention-days: 30

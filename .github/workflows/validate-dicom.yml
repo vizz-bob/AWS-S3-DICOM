@@ -1,0 +1,66 @@
+name: Validate DICOM Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_size:
+        description: 'Number of files to sample-validate from S3'
+        type: number
+        default: 10
+
+jobs:
+  validate:
+    name: Download Sample & Validate DICOM Tags
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pydicom boto3 Pillow
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Download sample files from S3
+        run: |
+          mkdir -p /tmp/dicom_sample
+          aws s3 ls s3://tp53-dicom-migration-2026/dicom-converted/ \
+            --recursive \
+            | awk '{print $4}' \
+            | head -${{ inputs.sample_size }} \
+            | while read key; do
+                aws s3 cp "s3://tp53-dicom-migration-2026/$key" /tmp/dicom_sample/
+              done
+          echo "Downloaded $(ls /tmp/dicom_sample | wc -l) files"
+
+      - name: Run DICOM validation
+        run: |
+          python scripts/validate_dicoms.py \
+            --input-dir /tmp/dicom_sample \
+            --report-path validation_report.txt
+          cat validation_report.txt
+
+      - name: Upload validation report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dicom-validation-report-${{ github.run_number }}
+          path: validation_report.txt
+          retention-days: 30
+
+      - name: Fail if validation errors found
+        run: |
+          if grep -q "ERROR" validation_report.txt; then
+            echo "Validation errors found — see artifact for details"
+            exit 1
+          fi
+          echo "All sampled DICOM files passed validation"

@@ -1,0 +1,42 @@
+# Medical image data — never commit to git
+*.tif
+*.tiff
+*.dcm
+*.dicom
+*.png
+*.jpg
+*.jpeg
+*.img
+
+# AWS & credentials
+.aws/
+*.env
+.env.*
+secrets.json
+*credentials*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# Reports & temp files
+upload_report.csv
+validation_report.txt
+postdicom_upload_report.csv
+/tmp/
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
