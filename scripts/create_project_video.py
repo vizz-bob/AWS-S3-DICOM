@@ -18,9 +18,8 @@ import textwrap
 from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import (
-    ImageClip, TextClip, CompositeVideoClip,
-    concatenate_videoclips, AudioFileClip
+from moviepy import (
+    ImageClip, concatenate_videoclips
 )
 import os
 
@@ -137,7 +136,7 @@ def build_video(images_dir: Path, output_path: Path):
         ],
         color=NAVY, accent=TEAL
     )
-    clips.append(ImageClip(frame).set_duration(SLIDE_DURATION))
+    clips.append(ImageClip(frame).with_duration(SLIDE_DURATION))
 
     # ── Slide 2: The Problem ────────────────────────────────────────────────
     frame = draw_slide(
@@ -151,7 +150,7 @@ def build_video(images_dir: Path, output_path: Path):
         ],
         color=(20, 40, 80), accent=ORANGE
     )
-    clips.append(ImageClip(frame).set_duration(SLIDE_DURATION))
+    clips.append(ImageClip(frame).with_duration(SLIDE_DURATION))
 
     # ── Slide 3: Solution Architecture ─────────────────────────────────────
     frame = draw_slide(
@@ -165,7 +164,7 @@ def build_video(images_dir: Path, output_path: Path):
         ],
         color=NAVY, accent=TEAL
     )
-    clips.append(ImageClip(frame).set_duration(SLIDE_DURATION))
+    clips.append(ImageClip(frame).with_duration(SLIDE_DURATION))
 
     # ── Slide 4: Tech Stack ─────────────────────────────────────────────────
     frame = draw_slide(
@@ -179,7 +178,7 @@ def build_video(images_dir: Path, output_path: Path):
         ],
         color=(15, 35, 75), accent=TEAL
     )
-    clips.append(ImageClip(frame).set_duration(SLIDE_DURATION))
+    clips.append(ImageClip(frame).with_duration(SLIDE_DURATION))
 
     # ── Slide 5: Sample image ───────────────────────────────────────────────
     sample_files = list(images_dir.glob("*.tif"))
@@ -187,7 +186,7 @@ def build_video(images_dir: Path, output_path: Path):
         ki67_files = [f for f in sample_files if "Ki67" in f.name and "20x" in f.name]
         sample = ki67_files[0] if ki67_files else sample_files[0]
         frame = make_image_slide(sample, f"Ki67 Immunohistochemistry  |  {sample.stem}")
-        clips.append(ImageClip(frame).set_duration(SLIDE_DURATION + 2))
+        clips.append(ImageClip(frame).with_duration(SLIDE_DURATION + 2))
 
     # ── Slide 6: Results ────────────────────────────────────────────────────
     frame = draw_slide(
@@ -202,7 +201,7 @@ def build_video(images_dir: Path, output_path: Path):
         ],
         color=(10, 60, 40), accent=(0, 180, 120)
     )
-    clips.append(ImageClip(frame).set_duration(SLIDE_DURATION))
+    clips.append(ImageClip(frame).with_duration(SLIDE_DURATION))
 
     # ── Slide 7: GitHub ─────────────────────────────────────────────────────
     frame = draw_slide(
@@ -217,7 +216,7 @@ def build_video(images_dir: Path, output_path: Path):
         ],
         color=NAVY, accent=ORANGE
     )
-    clips.append(ImageClip(frame).set_duration(SLIDE_DURATION))
+    clips.append(ImageClip(frame).with_duration(SLIDE_DURATION))
 
     # ── Slide 8: End card ───────────────────────────────────────────────────
     frame = draw_slide(
@@ -231,7 +230,7 @@ def build_video(images_dir: Path, output_path: Path):
         ],
         color=NAVY, accent=TEAL
     )
-    clips.append(ImageClip(frame).set_duration(SLIDE_DURATION))
+    clips.append(ImageClip(frame).with_duration(SLIDE_DURATION))
 
     # ── Concatenate & export ────────────────────────────────────────────────
     final = concatenate_videoclips(clips, method="compose")
